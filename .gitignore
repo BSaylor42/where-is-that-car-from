@@ -8,6 +8,7 @@
 *.tif
 *.png
 *.jpg
+*data/
 
 # History files
 .Rhistory
