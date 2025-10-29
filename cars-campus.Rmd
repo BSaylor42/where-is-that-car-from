@@ -47,8 +47,25 @@ APSU <- openproj(CampusMap, projection = "+proj=longlat +ellps=WGS84 +units=m +n
 ```
 
 ```{r}
+library(ggimage)
 autoplot.OpenStreetMap(APSU) + 
-  geom_point(data = cars, aes(x = lon, y = lat), size = 5, alpha = 0.8) + 
+ geom_text(
+    data = cars,
+    aes(x = lon, y = lat),
+    label = "🚗",           # the car icon
+    size = 4,               # adjust icon size
+    alpha = 1) + 
+  labs(x = "Longitude", y = "Latitude") 
+
+library(ggimage)
+cars$car_icon <- "car_icon.png"
+autoplot.OpenStreetMap(APSU) +
+  geom_image(
+    data = cars,
+    aes(x = lon, y = lat, image = car_icon),
+    size = 0.05,
+    asp = 1.5
+  ) +
   labs(x = "Longitude", y = "Latitude")
 ```
 
