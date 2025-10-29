@@ -2,29 +2,85 @@
 title: "Where is that car from?"
 author: "Brianna Saylor"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+ html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load("ggspatial","leaflet","OpenStreetMap","raster","sf","terra","terrainr","tidyterra","tidyverse", "maps")
+library(dplyr) # data manipulation
+library(ggplot2) # making graphs
+library(tidyverse)  # importing, tidying, plotting data
+library(knitr)      # making tables in markdown
+library(leaflet)    # making maps in markdown 
+library(hexbin)
+cars <- read.csv("data/cars_response_form.csv")
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
+```{r clean up data, include=FALSE}
+cars <- cars %>% 
+  rename( # rename columns 
+    lat = Latitude..the.x.coordinate..a.positive.value, 
+    lon = Longitude..the.y.coordinate..a.negative.value, 
+    state = Where.is.the.car.from, 
+    color = What.color.is.the.car)
+cars$state <- as.factor(cars$state)
+cars$color <- as.factor(cars$color)
 summary(cars)
+unique(cars$state)
+unique(cars$color)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r static map}
+# use min/max lat/long to set map imagery boundaries
+buffer <- 0.001
+min_lat <- min(cars$lat) - buffer
+max_lat <- max(cars$lat) + buffer
+min_lon <- min(cars$lon) - buffer
+max_lon <- max(cars$lon) + buffer
+CampusMap <- openmap(
+  upperLeft = c(max_lat, min_lon),   
+  lowerRight = c(min_lat, max_lon),  
+  type = "esri-imagery", zoom = 18, mergeTiles = TRUE)
+APSU <- openproj(CampusMap, projection = "+proj=longlat +ellps=WGS84 +units=m +no_defs")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+autoplot.OpenStreetMap(APSU) + 
+  geom_point(data = cars, aes(x = lon, y = lat), size = 5, alpha = 0.8) + 
+  labs(x = "Longitude", y = "Latitude")
+```
+
+
+```{r interactive map}
+library(RColorBrewer)
+pal <- colorFactor(
+  palette = colorRampPalette(brewer.pal(12, "Set3"))(19),
+  domain = cars$state
+)
+
+leaflet(cars) %>% 
+  addTiles() %>% 
+  addProviderTiles("OpenStreetMap", group = "Streets") %>% 
+  addProviderTiles("Esri.WorldImagery", group = "Imagery") %>% 
+  addLayersControl(baseGroups = c("Streets", "Imagery"), 
+                   options = layersControlOptions(collapsed = FALSE)) %>% 
+  addScaleBar() %>% 
+  addCircleMarkers(
+    lng = ~lon, 
+    lat = ~lat,
+    color = ~pal(state),      # colors by state
+    fillColor = ~pal(state),
+    fillOpacity = 0.9,
+    radius = 6,
+    stroke = FALSE,
+    label = ~state) %>%
+  addLegend(
+    "bottomright",
+    pal = pal,
+    values = ~state,
+    title = "State",
+    opacity = 1)
+```
+
