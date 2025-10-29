@@ -1,3 +1,14 @@
+#file types to ignore
+*.Rproj
+*.txt
+*.Rhistory
+*.gslides
+*.nb.html
+*.RData
+*.tif
+*.png
+*.jpg
+
 # History files
 .Rhistory
 .Rapp.history
